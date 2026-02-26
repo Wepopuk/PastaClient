@@ -45,6 +45,7 @@ public class Manager {
     public Arrows arrows;
     public TargetESP targetESP;
     public Particles particles;
+    public ChinaHat chinaHat;
     public ElytraHelper elytraHelper;
     public ElytraFly elytraFly;
     public ElytraJump elytraJump;
@@ -96,6 +97,7 @@ public class Manager {
         modules.add(arrows = new Arrows());
         modules.add(targetESP = new TargetESP());
         modules.add(particles = new Particles());
+        modules.add(chinaHat = new ChinaHat());
         modules.add(new TriggerBot());
         modules.add(elytraFly = new ElytraFly());
         modules.add(elytraJump = new ElytraJump());

@@ -180,15 +180,11 @@ public class DiscordActivity extends Module {
         sb.append("\"large_text\":\"").append(escapeJson(LARGE_IMAGE_TEXT)).append("\",");
         sb.append("\"small_image\":\"").append(escapeJson(icon.key)).append("\",");
         sb.append("\"small_text\":\"").append(escapeJson(icon.text)).append("\"},");
-        // IPC compatibility format: labels in "buttons", URLs in "metadata.button_urls".
+        // Discord IPC expects button objects: [{"label":"...","url":"..."}].
         sb.append("\"buttons\":[");
-        sb.append("\"").append(escapeJson(BUTTON_BUY_LABEL)).append("\",");
-        sb.append("\"").append(escapeJson(BUTTON_DISCORD_LABEL)).append("\"");
-        sb.append("],");
-        sb.append("\"metadata\":{\"button_urls\":[");
-        sb.append("\"").append(escapeJson(BUTTON_BUY_URL)).append("\",");
-        sb.append("\"").append(escapeJson(BUTTON_DISCORD_URL)).append("\"");
-        sb.append("]}}");
+        sb.append("{\"label\":\"").append(escapeJson(BUTTON_BUY_LABEL)).append("\",\"url\":\"").append(escapeJson(BUTTON_BUY_URL)).append("\"},");
+        sb.append("{\"label\":\"").append(escapeJson(BUTTON_DISCORD_LABEL)).append("\",\"url\":\"").append(escapeJson(BUTTON_DISCORD_URL)).append("\"}");
+        sb.append("]}");
         return sb.toString();
     }
 
