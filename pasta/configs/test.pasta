@@ -1,0 +1,125 @@
+module KillAura {
+enabled=false
+key=0
+Дистанция аттаки=3.0
+Только криты=true
+}
+
+module AntiBot {
+enabled=false
+key=0
+}
+
+module AntiPush {
+enabled=false
+key=0
+}
+
+module ItemScroller {
+enabled=false
+key=0
+}
+
+module Freezing {
+enabled=false
+key=0
+ReallyWorld=false
+}
+
+module Sprint {
+enabled=true
+key=0
+}
+
+module AutoPotion {
+enabled=false
+key=0
+}
+
+module ViewModel {
+enabled=false
+key=0
+Правая X=0.0
+Правая Y=0.0
+Правая Z=0.0
+Левая X=0.0
+Левая Y=0.0
+Левая Z=0.0
+}
+
+module AutoTotem {
+enabled=false
+key=0
+Здоровье=4.0
+}
+
+module NoRender {
+enabled=false
+key=0
+Удалять=Огонь на экране, Линия босса, Анимация тотема, Тайтлы, Таблица, Туман, Тряску камеры, Плохие эффекты, Дождь
+}
+
+module FreeLock {
+enabled=false
+key=0
+Включать 3 лицо=true
+}
+
+module InventoryMove {
+enabled=false
+key=0
+}
+
+module ClickPearl {
+enabled=false
+key=0
+Кнопка=-98
+}
+
+module Velocity {
+enabled=false
+key=0
+}
+
+module AutoArmor {
+enabled=false
+key=0
+}
+
+module Fly {
+enabled=false
+key=0
+}
+
+module Hud {
+enabled=false
+key=0
+}
+
+module TriggerBot {
+enabled=false
+key=0
+}
+
+module Elytra Booster {
+enabled=false
+key=0
+Прямая скорость=37.0
+Угловая скорость=43.0
+Углы=Вверх, Вниз, Влево, Вправо
+Авто-старт=true
+Строгий режим=false
+}
+
+module Elytra Helper {
+enabled=false
+key=0
+Кнопка свапа=0
+Кнопка фейерверков=0
+Авто прыжок=true
+Авто взлет=true
+Авто фейерверк=false
+Фейр в левую руку=true
+Только при взлете=false
+}
+

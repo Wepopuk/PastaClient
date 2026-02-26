@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+}
+
+group 'Mcp'
+version '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation fileTree('libraries')
+    implementation files('libraries/media-player-info-0.1.0.jar')
+    implementation files('libraries/java-spotify-api-1.5.1.jar')
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
+    compileOnly 'org.projectlombok:lombok:1.18.32'
+    annotationProcessor 'org.projectlombok:lombok:1.18.32'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'windows-1251'
+}
+
+test {
+    useJUnitPlatform()
+}

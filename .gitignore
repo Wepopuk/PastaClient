@@ -1,0 +1,23 @@
+﻿# Gradle caches
+.gradle/
+.gradle-home/
+**/wrapper/dists/
+build/
+out/
+run/
+
+# IDE
+.idea/
+*.iml
+.ai/
+
+# Logs
+logs/
+*.log
+
+# Runtime junk
+usercache.json
+
+# OS
+.DS_Store
+Thumbs.db
