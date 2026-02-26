@@ -29,6 +29,9 @@ import net.minecraft.util.math.vector.Matrix4f;
 import net.minecraft.util.math.vector.Vector3f;
 import net.minecraft.util.math.vector.Vector4f;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class ESP extends Module {
 
     private static final int LEFT_ACCENT = ColorUtil.rgba(116, 220, 255, 255);
@@ -46,6 +49,7 @@ public class ESP extends Module {
             new BooleanOption("Health Text", true),
             new BooleanOption("Name", true),
             new BooleanOption("Held Item", true));
+    private final HashMap<Entity, Vector4f> positions = new HashMap<>();
 
     public ESP() {
         super("ESP", Category.VISUAL);
@@ -55,34 +59,50 @@ public class ESP extends Module {
     @Subscribe
     public void onRender3D(EventRender3D event) {
         if (!enable || mc.world == null || mc.player == null) {
+            positions.clear();
             return;
         }
 
         Matrix4f projection = Minecraft.getInstance().gameRenderer
                 .getProjectionMatrix(event.activeRenderInfo, event.partialTicks, true);
         Matrix4f view = new Matrix4f(event.matrixStack.getLast().getMatrix());
+        positions.clear();
 
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableDepthTest();
-
-        try {
-            MatrixStack guiStack = new MatrixStack();
-            for (Entity entity : mc.world.getAllEntities()) {
-                if (entity instanceof PlayerEntity) {
-                    if (!elements.get("Players")) {
-                        continue;
-                    }
-                    renderPlayer(event, guiStack, (PlayerEntity) entity, view, projection);
+        for (Entity entity : mc.world.getAllEntities()) {
+            if (entity instanceof PlayerEntity) {
+                if (!elements.get("Players")) {
                     continue;
                 }
-                if (entity instanceof ItemEntity && elements.get("Items")) {
-                    renderItem(event, guiStack, (ItemEntity) entity, view, projection);
+                if (!isRenderablePlayer((PlayerEntity) entity)) {
+                    continue;
                 }
+            } else if (entity instanceof ItemEntity) {
+                if (!elements.get("Items")) {
+                    continue;
+                }
+                if (((ItemEntity) entity).getItem().isEmpty()) {
+                    continue;
+                }
+                if (mc.player.getDistanceSq(entity) > 80.0D * 80.0D) {
+                    continue;
+                }
+            } else {
+                continue;
             }
-        } finally {
-            RenderSystem.enableDepthTest();
-            RenderSystem.disableBlend();
+
+            AxisAlignedBB bb = entity.getBoundingBox().grow(0.08D);
+            float[] screen = projectBox(bb, view, projection, event.camX, event.camY, event.camZ);
+            if (screen == null) {
+                continue;
+            }
+
+            float w = screen[2] - screen[0];
+            float h = screen[3] - screen[1];
+            if (w <= 1.0F || h <= 1.0F) {
+                continue;
+            }
+
+            positions.put(entity, new Vector4f(screen[0], screen[1], screen[2], screen[3]));
         }
     }
 
@@ -155,27 +175,51 @@ public class ESP extends Module {
         return new float[]{outMinX, outMinY, outMaxX, outMaxY};
     }
 
-    private void renderPlayer(EventRender3D event, MatrixStack stack, PlayerEntity player, Matrix4f view, Matrix4f projection) {
-        if (!player.isAlive() || player.isInvisible()) {
+    @Subscribe
+    public void onRender2D(fun.pasta.event.EventRender2D event) {
+        if (!enable || mc.world == null || mc.player == null || positions.isEmpty() || event.matrixStack == null) {
             return;
+        }
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableDepthTest();
+
+        try {
+            for (Map.Entry<Entity, Vector4f> entry : positions.entrySet()) {
+                Entity entity = entry.getKey();
+                Vector4f rect = entry.getValue();
+                if (entity instanceof PlayerEntity) {
+                    renderPlayer2D(event.matrixStack, (PlayerEntity) entity, rect);
+                } else if (entity instanceof ItemEntity) {
+                    renderItem2D(event.matrixStack, (ItemEntity) entity, rect);
+                }
+            }
+        } finally {
+            RenderSystem.enableDepthTest();
+            RenderSystem.disableBlend();
+        }
+    }
+
+    private boolean isRenderablePlayer(PlayerEntity player) {
+        if (player == null || !player.isAlive() || player.isInvisible()) {
+            return false;
         }
         if (AntiBot.isBot(player)) {
-            return;
+            return false;
         }
-        if (player == mc.player && mc.gameSettings.getPointOfView() == PointOfView.FIRST_PERSON) {
+        return player != mc.player || mc.gameSettings.getPointOfView() != PointOfView.FIRST_PERSON;
+    }
+
+    private void renderPlayer2D(MatrixStack stack, PlayerEntity player, Vector4f rect) {
+        if (!isRenderablePlayer(player)) {
             return;
         }
 
-        AxisAlignedBB bb = player.getBoundingBox().grow(0.08D);
-        float[] screen = projectBox(bb, view, projection, event.camX, event.camY, event.camZ);
-        if (screen == null) {
-            return;
-        }
-
-        float x = screen[0];
-        float y = screen[1];
-        float x2 = screen[2];
-        float y2 = screen[3];
+        float x = rect.x;
+        float y = rect.y;
+        float x2 = rect.z;
+        float y2 = rect.w;
         float w = x2 - x;
         float h = y2 - y;
         if (w <= 1.0F || h <= 1.0F) {
@@ -242,23 +286,14 @@ public class ESP extends Module {
         }
     }
 
-    private void renderItem(EventRender3D event, MatrixStack stack, ItemEntity itemEntity, Matrix4f view, Matrix4f projection) {
+    private void renderItem2D(MatrixStack stack, ItemEntity itemEntity, Vector4f rect) {
         if (itemEntity == null || itemEntity.getItem().isEmpty()) {
             return;
         }
-        if (mc.player.getDistanceSq(itemEntity) > 80.0D * 80.0D) {
-            return;
-        }
 
-        AxisAlignedBB bb = itemEntity.getBoundingBox().grow(0.08D);
-        float[] screen = projectBox(bb, view, projection, event.camX, event.camY, event.camZ);
-        if (screen == null) {
-            return;
-        }
-
-        float x = screen[0];
-        float y = screen[1];
-        float x2 = screen[2];
+        float x = rect.x;
+        float y = rect.y;
+        float x2 = rect.z;
         float w = x2 - x;
 
         String text = itemEntity.getItem().getDisplayName().getString() + " x" + itemEntity.getItem().getCount();
@@ -273,7 +308,14 @@ public class ESP extends Module {
     private void drawFullBox(MatrixStack stack, float x, float y, float x2, float y2, int leftColor, int rightColor) {
         float w = x2 - x;
         float h = y2 - y;
-        RenderUtil2D.drawRect(stack, x - 0.5F, y - 0.5F, w + 1.0F, h + 1.0F, OUTLINE);
+
+        // Outer dark outline (without center fill)
+        RenderUtil2D.drawRect(stack, x - 1.0F, y - 1.0F, w + 2.0F, 1.0F, OUTLINE);
+        RenderUtil2D.drawRect(stack, x - 1.0F, y2, w + 2.0F, 1.0F, OUTLINE);
+        RenderUtil2D.drawRect(stack, x - 1.0F, y, 1.0F, h, OUTLINE);
+        RenderUtil2D.drawRect(stack, x2, y, 1.0F, h, OUTLINE);
+
+        // Main colored border
         RenderUtil2D.drawRectHorizontalW(x, y, w, 1.0F, leftColor, rightColor);
         RenderUtil2D.drawRectHorizontalW(x, y2 - 1.0F, w, 1.0F, leftColor, rightColor);
         RenderUtil2D.drawRectVerticalW(x, y, 1.0F, h, leftColor, leftColor);
