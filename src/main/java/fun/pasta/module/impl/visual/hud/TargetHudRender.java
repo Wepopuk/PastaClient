@@ -73,20 +73,20 @@ public class TargetHudRender implements IRenderHud {
                 ? Pasta.instance.manager.killAura.target
                 : null;
 
-        AbstractClientPlayerEntity displayPlayer = null;
+        LivingEntity displayTarget = null;
         if (mc.currentScreen instanceof ChatScreen && mc.player instanceof AbstractClientPlayerEntity) {
-            if (target instanceof AbstractClientPlayerEntity) {
-                displayPlayer = (AbstractClientPlayerEntity) target;
+            if (target != null && target.isAlive()) {
+                displayTarget = target;
             } else {
-                displayPlayer = (AbstractClientPlayerEntity) mc.player;
+                displayTarget = mc.player;
             }
-        } else if (target instanceof AbstractClientPlayerEntity) {
-            displayPlayer = (AbstractClientPlayerEntity) target;
-        } else if (chatPlayer != null && System.currentTimeMillis() - chatPlayerTime < 5000) {
-            displayPlayer = chatPlayer;
+        } else if (target != null && target.isAlive()) {
+            displayTarget = target;
+        } else if (chatPlayer != null && chatPlayer.isAlive() && System.currentTimeMillis() - chatPlayerTime < 5000) {
+            displayTarget = chatPlayer;
         }
 
-        if (displayPlayer == null) {
+        if (displayTarget == null) {
             return;
         }
 
@@ -95,39 +95,50 @@ public class TargetHudRender implements IRenderHud {
         dragging.setWidth(width);
         dragging.setHeight(height);
 
-        String name = displayPlayer.getName().getString();
+        String name = displayTarget.getName().getString();
         Object module = Pasta.instance.manager.getModule("NameProtect");
-        if (module instanceof NameProtect) {
+        if (module instanceof NameProtect && displayTarget instanceof PlayerEntity) {
             name = ((NameProtect) module).protect(name);
         }
-        float currentHealth = HealthUtil.getHealthForTargetHud(displayPlayer);
+        float currentHealth = HealthUtil.getHealthForTargetHud(displayTarget);
         String healthText = String.format("HP : %.1f", currentHealth);
 
         drawBackground();
-        drawHead(displayPlayer);
+        drawHead(displayTarget);
         drawInfo(name, healthText);
-        drawHealthBar(displayPlayer);
+        drawHealthBar(displayTarget);
     }
 
     private void drawBackground() {
         RenderUtil2D.drawRoundRect(x, y, width, height, HUD_RADIUS, BACKGROUND_COLOR);
     }
 
-    private void drawHead(AbstractClientPlayerEntity player) {
+    private void drawHead(LivingEntity entity) {
         float headX = x + PADDING_LEFT;
         float headY = y + (height - HEAD_SIZE) / 2f;
-        ResourceLocation skin = player.getLocationSkin();
+        if (entity instanceof AbstractClientPlayerEntity) {
+            ResourceLocation skin = ((AbstractClientPlayerEntity) entity).getLocationSkin();
+            RenderUtil2D.drawRoundedHead(
+                    skin,
+                    headX,
+                    headY,
+                    HEAD_SIZE,
+                    HEAD_SIZE,
+                    HEAD_RADIUS,
+                    1.0f,
+                    0.0f
+            );
+            return;
+        }
 
-        RenderUtil2D.drawRoundedHead(
-                skin,
-                headX,
-                headY,
-                HEAD_SIZE,
-                HEAD_SIZE,
-                HEAD_RADIUS,
-                1.0f,
-                0.0f
-        );
+        int mobBg = ColorUtil.rgba(30, 30, 30, 215);
+        RenderUtil2D.drawRoundRect(headX, headY, HEAD_SIZE, HEAD_SIZE, HEAD_RADIUS, mobBg);
+        Font iconFont = getFont(Fonts.sfpro, Fonts.mstr, 20f);
+        String marker = entity.getName().getString();
+        marker = marker.isEmpty() ? "M" : marker.substring(0, 1).toUpperCase();
+        float tx = headX + (HEAD_SIZE - iconFont.getWidth(marker)) / 2.0f;
+        float ty = headY + (HEAD_SIZE - iconFont.getHeight()) / 2.0f;
+        iconFont.drawString(marker, tx, ty, TEXT_COLOR);
     }
 
     private void drawInfo(String name, String healthText) {
@@ -154,7 +165,7 @@ public class TargetHudRender implements IRenderHud {
         hpFont.drawString(displayHp, contentX, hpY, TEXT_COLOR);
     }
 
-    private void drawHealthBar(AbstractClientPlayerEntity player) {
+    private void drawHealthBar(LivingEntity entity) {
         float barX = x + PADDING_LEFT + HEAD_SIZE + GAP;
         float contentY = y + (height - HEAD_SIZE) / 2f;
 
@@ -173,8 +184,8 @@ public class TargetHudRender implements IRenderHud {
         float barY = contentY + nameHeight + gapY + hpHeight + gapY;
 
         // хп %
-        float maxHealth = player.getMaxHealth();
-        float currentHealth = MathHelper.clamp(HealthUtil.getHealthForTargetHud(player), 0f, maxHealth);
+        float maxHealth = Math.max(entity.getMaxHealth(), 1.0f);
+        float currentHealth = MathHelper.clamp(HealthUtil.getHealthForTargetHud(entity), 0f, maxHealth);
         float healthPercentage = (maxHealth > 0f) ? (currentHealth / maxHealth) : 0f;
 
         float healthWidth = MathHelper.clamp(barWidth * healthPercentage, 0f, barWidth);

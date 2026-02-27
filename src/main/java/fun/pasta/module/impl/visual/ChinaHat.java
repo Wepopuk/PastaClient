@@ -105,8 +105,11 @@ public class ChinaHat extends Module {
         double y = MathHelper.lerp(event.partialTicks, player.lastTickPosY, player.getPosY());
         double z = MathHelper.lerp(event.partialTicks, player.lastTickPosZ, player.getPosZ());
 
-        float armorOffset = player.getItemStackFromSlot(EquipmentSlotType.HEAD).isEmpty() ? 0.03F : -0.01F;
-        y += player.getHeight() + (player.isSneaking() ? 0.02F : 0.06F) + armorOffset;
+        float helmetOffset = player.getItemStackFromSlot(EquipmentSlotType.HEAD).isEmpty() ? -0.10F : -0.06F;
+        y += player.getHeight() + helmetOffset;
+        if (player.isSneaking()) {
+            y -= 0.03F;
+        }
 
         float hatRadius = player.getWidth() * radius.getValue().floatValue();
         float hatHeight = height.getValue().floatValue();

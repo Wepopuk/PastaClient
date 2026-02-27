@@ -20,9 +20,7 @@ import fun.pasta.util.render.RenderUtil2D;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.PointOfView;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Matrix4f;
@@ -38,17 +36,13 @@ public class ESP extends Module {
     private static final int RIGHT_ACCENT = ColorUtil.rgba(255, 86, 86, 255);
     private static final int FRIEND_ACCENT = ColorUtil.rgba(90, 220, 120, 255);
     private static final int OUTLINE = ColorUtil.rgba(15, 15, 15, 180);
-    private static final int TAG_BG = ColorUtil.rgba(18, 18, 18, 165);
 
     public final SliderOption scaleSetting = new SliderOption("Scale", 1.0F, 0.5F, 2.0F, 0.1F);
     public final ModeOption renderType = new ModeOption("Render", "Hybrid", "Box", "Corners", "Hybrid");
     public final MultiBoxOption elements = new MultiBoxOption("Elements",
             new BooleanOption("Players", true),
-            new BooleanOption("Items", true),
             new BooleanOption("Health Bar", true),
-            new BooleanOption("Health Text", true),
-            new BooleanOption("Name", true),
-            new BooleanOption("Held Item", true));
+            new BooleanOption("Health Text", true));
     private final HashMap<Entity, Vector4f> positions = new HashMap<>();
 
     public ESP() {
@@ -76,21 +70,11 @@ public class ESP extends Module {
                 if (!isRenderablePlayer((PlayerEntity) entity)) {
                     continue;
                 }
-            } else if (entity instanceof ItemEntity) {
-                if (!elements.get("Items")) {
-                    continue;
-                }
-                if (((ItemEntity) entity).getItem().isEmpty()) {
-                    continue;
-                }
-                if (mc.player.getDistanceSq(entity) > 80.0D * 80.0D) {
-                    continue;
-                }
             } else {
                 continue;
             }
 
-            AxisAlignedBB bb = entity.getBoundingBox().grow(0.08D);
+            AxisAlignedBB bb = getInterpolatedBoundingBox(entity, event.partialTicks).grow(0.08D);
             float[] screen = projectBox(bb, view, projection, event.camX, event.camY, event.camZ);
             if (screen == null) {
                 continue;
@@ -104,6 +88,14 @@ public class ESP extends Module {
 
             positions.put(entity, new Vector4f(screen[0], screen[1], screen[2], screen[3]));
         }
+    }
+
+    private AxisAlignedBB getInterpolatedBoundingBox(Entity entity, float partialTicks) {
+        AxisAlignedBB bb = entity.getBoundingBox();
+        double ix = MathHelper.lerp(partialTicks, entity.lastTickPosX, entity.getPosX());
+        double iy = MathHelper.lerp(partialTicks, entity.lastTickPosY, entity.getPosY());
+        double iz = MathHelper.lerp(partialTicks, entity.lastTickPosZ, entity.getPosZ());
+        return bb.offset(ix - entity.getPosX(), iy - entity.getPosY(), iz - entity.getPosZ());
     }
 
     private float[] projectBox(AxisAlignedBB box, Matrix4f view, Matrix4f proj,
@@ -191,8 +183,6 @@ public class ESP extends Module {
                 Vector4f rect = entry.getValue();
                 if (entity instanceof PlayerEntity) {
                     renderPlayer2D(event.matrixStack, (PlayerEntity) entity, rect);
-                } else if (entity instanceof ItemEntity) {
-                    renderItem2D(event.matrixStack, (ItemEntity) entity, rect);
                 }
             }
         } finally {
@@ -259,50 +249,6 @@ public class ESP extends Module {
             font.drawString(stack, hpText, x - font.getWidth(hpText) - 6.0F, y - 1.0F, 0xFFFFFFFF);
         }
 
-        if (elements.get("Name")) {
-            String name = player.getName().getString();
-            String suffix = " - " + hpInt;
-            float nameW = font.getWidth(name);
-            float suffixW = font.getWidth(suffix);
-            float totalW = nameW + suffixW + 8.0F;
-            float bx = x + (w - totalW) / 2.0F;
-            float by = y - 11.0F;
-
-            RenderUtil2D.drawRoundRect(stack, bx, by, totalW, 9.0F, 2.0F, TAG_BG);
-            font.drawString(stack, name, bx + 4.0F, by + 1.0F, 0xFFFFFFFF);
-            font.drawString(stack, suffix, bx + 4.0F + nameW, by + 1.0F, rightColor);
-        }
-
-        if (elements.get("Held Item")) {
-            ItemStack item = player.getHeldItemMainhand();
-            if (!item.isEmpty()) {
-                String itemName = item.getDisplayName().getString();
-                float textW = font.getWidth(itemName);
-                float tx = x + (w - textW - 6.0F) / 2.0F;
-                float ty = y2 + 3.0F;
-                RenderUtil2D.drawRoundRect(stack, tx, ty, textW + 6.0F, 9.0F, 2.0F, TAG_BG);
-                font.drawString(stack, itemName, tx + 3.0F, ty + 1.0F, 0xFFFFFFFF);
-            }
-        }
-    }
-
-    private void renderItem2D(MatrixStack stack, ItemEntity itemEntity, Vector4f rect) {
-        if (itemEntity == null || itemEntity.getItem().isEmpty()) {
-            return;
-        }
-
-        float x = rect.x;
-        float y = rect.y;
-        float x2 = rect.z;
-        float w = x2 - x;
-
-        String text = itemEntity.getItem().getDisplayName().getString() + " x" + itemEntity.getItem().getCount();
-        Font font = Fonts.mstr.get(8.0F);
-        float textW = font.getWidth(text);
-        float bx = x + (w - textW - 6.0F) / 2.0F;
-        float by = y - 11.0F;
-        RenderUtil2D.drawRoundRect(stack, bx, by, textW + 6.0F, 9.0F, 2.0F, TAG_BG);
-        font.drawString(stack, text, bx + 3.0F, by + 1.0F, 0xFFFFFFFF);
     }
 
     private void drawFullBox(MatrixStack stack, float x, float y, float x2, float y2, int leftColor, int rightColor) {
